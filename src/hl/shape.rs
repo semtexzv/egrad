@@ -5,7 +5,7 @@ use std::ops::{Index, Range, RangeFrom, RangeFull, RangeTo};
 #[macro_export]
 macro_rules! shape {
     ($($s:expr),* $(,)?) => {
-        $crate::shape::Shape::from(vec![ $($s),*])
+        $crate::hl::shape::Shape::from(vec![ $($s),*])
     };
 }
 
@@ -125,17 +125,6 @@ impl Index<RangeFull> for Shape {
         &self.dims[..]
     }
 }
-
-// impl<R: RangeBounds<isize>> Index<R> for Shape {
-//     type Output = [usize];
-//     #[inline(always)]
-//     fn index(&self, index: R) -> &Self::Output {
-//         let s = index.start_bound().map(|i| self.wrap(i));
-//         let e = index.end_bound().map(map);
-//         println!("{:?}, {:?}", s, e);
-//         &self.dims[(s, e)]
-//     }
-// }
 
 impl Shape {
     pub fn prod(&self) -> usize {

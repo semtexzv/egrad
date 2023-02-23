@@ -1,6 +1,6 @@
-use crate::expr::{Eval, Expr, Ten, Value};
-use crate::expr::param::param;
-use crate::shape::Shape;
+use crate::hl::expr::param::param;
+use crate::hl::expr::{Eval, Expr, Ten, Value};
+use crate::hl::shape::Shape;
 
 pub trait ModuleInput {
     /// What shape each element in a batch has.
@@ -24,8 +24,8 @@ pub trait Module<Input: ModuleInput> {
 }
 
 impl<Input: ModuleInput, T, O> Module<Input> for T
-    where
-        T: Fn(Input) -> O,
+where
+    T: Fn(Input) -> O,
 {
     type Output = O;
 

@@ -1,4 +1,6 @@
-use crate::expr::{Eval, Expr, ExprData, ExprImpl, Ten, Value, Visitor};
+use crate::hl::expr::{Eval, Expr, ExprData, ExprImpl, Ten, Value, Visitor};
+use crate::hl::shape::Shape;
+use crate::ml::{BufId, OpType};
 use std::ops::{Add, Deref, Div, Mul, Sub};
 
 #[derive(Debug)]
@@ -10,20 +12,29 @@ pub(crate) enum BinOp {
 #[derive(Debug)]
 pub struct Bin<T: Value, E: Eval> {
     op: BinOp,
+    shape: Shape,
     l: Expr<T, E>,
     r: Expr<T, E>,
 }
 
 impl<T: Value, E: Eval> ExprImpl<T, E> for Bin<T, E> {
+    fn shape(&self) -> &Shape {
+        &self.shape
+    }
+
     fn accept(&self, v: &mut dyn Visitor<T, E>) {
         self.l.accept(v);
         self.r.accept(v);
     }
 
-    fn eval(&self, id: u64, e: &mut E) -> Ten<T> {
+    fn eval(&self, id: u64, e: &mut E) -> BufId {
         let l = self.l.eval(e);
         let r = self.r.eval(e);
-        l
+
+        match self.op {
+            BinOp::Add => e.emitter().emit(OpType::Add, &self.shape, l, r),
+            BinOp::Mul => e.emitter().emit(OpType::Mul, &self.shape, l, r),
+        }
     }
 
     fn backward(&self, e: &mut E, grad: Expr<E::Grad, E>) {
@@ -51,6 +62,7 @@ where
     fn add(self, rhs: RHS) -> Self::Output {
         Expr(ExprData::new(Bin {
             op: BinOp::Add,
+            shape: self.shape().clone(),
             l: self,
             r: rhs.into(),
         }))
@@ -81,6 +93,7 @@ where
     fn mul(self, rhs: RHS) -> Self::Output {
         Expr(ExprData::new(Bin {
             op: BinOp::Mul,
+            shape: self.shape().clone(),
             l: self,
             r: rhs.into(),
         }))
@@ -96,7 +109,6 @@ where
     type Output = Expr<T, E>;
 
     fn div(self, rhs: RHS) -> Self::Output {
-
         self * rhs.into().rec()
     }
 }

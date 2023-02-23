@@ -9,3 +9,5 @@ edition = "2021"
 rand = "0.8.5"
 ndarray = { version = "0.15.6", features = [] }
 ndarray-rand = "0.14.0"
+
+indexmap = "1.9.2"

@@ -2,8 +2,9 @@ pub mod bin;
 pub mod param;
 pub mod un;
 
-use crate::expr::param::Param;
-use crate::shape::Shape;
+use crate::hl::expr::param::Param;
+use crate::hl::shape::Shape;
+use crate::ml::{BufId, MLBuilder};
 use std::any::{type_name, Any as StdAny, Any, TypeId};
 use std::cell::{Cell, RefCell};
 use std::fmt::Debug;
@@ -33,31 +34,16 @@ impl Value for f32 {}
 pub trait Eval: Debug + 'static {
     type Grad: Value;
 
-    fn on_forward<F: FnOnce(&mut Self) -> R, R>(&mut self, id: u64, f: F) -> R;
-
-    fn grad(&self) -> bool;
+    /// Make a new unique id for expression node
     fn mkid(&mut self) -> u64;
-    fn saved(&mut self, id: u64);
-}
+    /// Whether we're interested in tracking gradients.
+    fn grad(&self) -> bool;
 
-impl Eval for () {
-    type Grad = f32;
+    fn enter(&self, id: u64);
+    fn exit(&self, id: u64);
 
-    fn on_forward<F: FnOnce(&mut Self) -> R, R>(&mut self, id: u64, f: F) -> R {
-        todo!()
-    }
-
-    fn grad(&self) -> bool {
-        todo!()
-    }
-
-    fn mkid(&mut self) -> u64 {
-        todo!()
-    }
-
-    fn saved(&mut self, id: u64) {
-        todo!()
-    }
+    /// MLOp emitter. Used in forward pass to creat the actual computation graph (with optimizations).
+    fn emitter(&mut self) -> &mut MLBuilder;
 }
 
 impl<T: Value, E: Eval> Into<Expr<T, E>> for &Expr<T, E> {
@@ -72,12 +58,13 @@ pub trait Visitor<T: Value, E: Eval> {
 }
 
 /// Expression implementation. In the forward pass, it should evaluate subexpressions
-/// 
+///
 /// In backwards passes it should prepare the backwards graph from the forward one
 pub trait ExprImpl<T: Value, E: Eval>: Any + Debug {
+    fn shape(&self) -> &Shape;
     fn accept(&self, v: &mut dyn Visitor<T, E>);
     /// Evaluates this expression, producing materializable resutl
-    fn eval(&self, id: u64, e: &mut E) -> Ten<T>;
+    fn eval(&self, id: u64, e: &mut E) -> BufId;
     /// Implements backwards pass for a graph
     fn backward(&self, e: &mut E, grad: Expr<E::Grad, E>);
 
@@ -88,7 +75,7 @@ pub trait ExprImpl<T: Value, E: Eval>: Any + Debug {
 }
 
 impl<T: Value, E: Eval> Expr<T, E> {
-    pub fn eval(&self, e: &mut E) -> Ten<T> {
+    pub fn eval(&self, e: &mut E) -> BufId {
         self.0.eval(e)
     }
     /// If this tensor requires grad
@@ -103,8 +90,9 @@ impl<T: Value, E: Eval> Expr<T, E> {
 #[derive(Debug)]
 /// A DST that contains all tensor data along with the implementation of the tensor logic.
 pub struct ExprData<T: Value, E: Eval, I: ?Sized = dyn ExprImpl<T, E> + 'static> {
+    pub _p: PhantomData<T>,
     pub id: Cell<u64>,
-    pub val: RefCell<Option<Ten<T>>>,
+    pub val: Cell<Option<BufId>>,
     pub grad: RefCell<Option<Ten<E::Grad>>>,
     pub _impl: I,
 }
@@ -112,8 +100,9 @@ pub struct ExprData<T: Value, E: Eval, I: ?Sized = dyn ExprImpl<T, E> + 'static>
 impl<T: Value, E: Eval, I: ExprImpl<T, E> + Sized> ExprData<T, E, I> {
     pub fn new(i: I) -> Rc<ExprData<T, E, I>> {
         Rc::new(ExprData {
+            _p: Default::default(),
             id: Cell::new(0),
-            val: RefCell::new(None),
+            val: Cell::new(None),
             grad: RefCell::new(None),
             _impl: i,
         })
@@ -135,14 +124,22 @@ impl<T: Value, E: Eval, I: ExprImpl<T, E> + Sized> ExprData<T, E, I> {
 }
 
 impl<T: Value, E: Eval, I: ExprImpl<T, E> + ?Sized> ExprData<T, E, I> {
-    fn eval(&self, e: &mut E) -> Ten<T> {
+    fn eval(&self, e: &mut E) -> BufId {
+        if let Some(bufid) = self.val.get() {
+            return bufid;
+        }
+
         let mut id = self.id.get();
 
         if id == 0 {
             id = e.mkid();
             self.id.set(id);
         }
-        e.on_forward(id, |e| self._impl.eval(id, e))
+
+        e.enter(id);
+        let out = self._impl.eval(id, e);
+        e.exit(id);
+        out
     }
 }
 
@@ -177,8 +174,8 @@ impl<T: Value, E: Eval, I: Sized + ExprImpl<T, E>> Expr<T, E, I> {
 }
 
 impl<T: Value, E: Eval> Expr<T, E> {
-    fn shape(&self) -> Shape {
-        todo!()
+    fn shape(&self) -> &Shape {
+        self.0._impl.shape()
     }
 }
 

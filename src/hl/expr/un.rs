@@ -1,5 +1,7 @@
-use crate::expr::param::zero;
-use crate::expr::{Eval, Expr, ExprData, ExprImpl, Ten, Value, Visitor};
+use crate::hl::expr::param::zero;
+use crate::hl::expr::{Eval, Expr, ExprData, ExprImpl, Ten, Value, Visitor};
+use crate::hl::shape::Shape;
+use crate::ml::{BufId, OpType};
 use std::ops::Neg;
 
 #[derive(Debug)]
@@ -24,18 +26,23 @@ struct Un<T: Value, E: Eval> {
 }
 
 impl<T: Value, E: Eval> ExprImpl<T, E> for Un<T, E> {
+    fn shape(&self) -> &Shape {
+        &self.shape()
+    }
+
     fn accept(&self, v: &mut dyn Visitor<T, E>) {
         self.x.accept(v);
     }
 
-    fn eval(&self, id: u64, e: &mut E) -> Ten<T> {
-        // match self.op {
-        //     UnOp::Neg => {
-        //         self.x.forward()
-        //     }
-        //     UnOp::Rec => {}
-        // }
-        todo!()
+    fn eval(&self, id: u64, e: &mut E) -> BufId {
+        match self.op {
+            UnOp::Neg => {
+                let x = self.x.eval(e);
+                e.emitter()
+                    .emit(OpType::Neg, self.shape(), x, BufId::default())
+            }
+            _ => todo!(),
+        }
     }
 
     fn backward(&self, e: &mut E, grad: Expr<E::Grad, E>) {
@@ -47,7 +54,7 @@ impl<T: Value, E: Eval> ExprImpl<T, E> for Un<T, E> {
             }),
             UnOp::Exp => self.x.backward(e, || grad * self.x.astype()),
             UnOp::Log => self.x.backward(e, || grad / self.x.astype()),
-            UnOp::Gtz => self.x.backward(e, || zero::<T, E>(grad.shape())),
+            UnOp::Gtz => self.x.backward(e, || zero::<T, E>(grad.shape().clone())),
         }
     }
 }
