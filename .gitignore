@@ -1,1 +1,3 @@
 /target
+/mlir/llvm-project
+/mlir/mlir-build

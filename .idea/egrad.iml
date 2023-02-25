@@ -2,8 +2,15 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/iree-rs/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/iree-rs/iree-sys/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/iree-rs/iree-sys/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/iree-rs/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/iree-rs/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/mlir/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/iree-rs/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
