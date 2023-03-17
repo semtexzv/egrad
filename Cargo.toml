@@ -7,10 +7,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+num = "0.4.0"
 rand = "0.8.5"
 ndarray = { version = "0.15.6", features = [] }
 ndarray-rand = "0.14.0"
 
 indexmap = "1.9.2"
 
-#iree-rs = { path = "./iree-rs" }
+melior = "0.3.1"

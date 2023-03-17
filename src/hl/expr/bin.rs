@@ -2,6 +2,7 @@ use crate::hl::expr::{Eval, Expr, ExprData, ExprImpl, Ten, Value, Visitor};
 use crate::hl::shape::Shape;
 use crate::ml::{BufId, OpType};
 use std::ops::{Add, Deref, Div, Mul, Sub};
+use num::traits::Inv;
 
 #[derive(Debug)]
 pub(crate) enum BinOp {
@@ -109,6 +110,6 @@ where
     type Output = Expr<T, E>;
 
     fn div(self, rhs: RHS) -> Self::Output {
-        self * rhs.into().rec()
+        self * rhs.into().inv()
     }
 }

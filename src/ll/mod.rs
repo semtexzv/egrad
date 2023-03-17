@@ -10,10 +10,5 @@ pub trait BufferT<E: Backend<Buffer = Self>>: Sized {
 pub trait Backend: Sized {
     type Buffer: BufferT<Self>;
     fn alloc(&mut self, shp: &Shape) -> Self::Buffer;
-    fn begin(&mut self) -> ShaderBuilder<Self>;
-}
-
-
-pub struct ShaderBuilder<'b, B: Backend> {
-    b: &'b mut B,
+    // fn begin(&mut self) -> ShaderBuilder<Self>;
 }

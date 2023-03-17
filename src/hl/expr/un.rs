@@ -3,6 +3,7 @@ use crate::hl::expr::{Eval, Expr, ExprData, ExprImpl, Ten, Value, Visitor};
 use crate::hl::shape::Shape;
 use crate::ml::{BufId, OpType};
 use std::ops::Neg;
+use num::traits::{Inv, Pow};
 
 #[derive(Debug)]
 /// Unary operation. Executed on each scalar, candidate for fusion.
@@ -70,13 +71,18 @@ impl<T: Value, E: Eval> Neg for Expr<T, E> {
     }
 }
 
-impl<T: Value, E: Eval> Expr<T, E> {
-    pub fn rec(self) -> Expr<T, E> {
+impl<T: Value, E: Eval> Inv for Expr<T, E> {
+    type Output = Expr<T, E>;
+
+    fn inv(self) -> Self::Output {
         Expr(ExprData::new(Un {
             op: UnOp::Rec,
             x: self,
         }))
     }
+}
+
+impl<T: Value, E: Eval> Expr<T, E> {
     pub fn exp(self) -> Expr<T, E> {
         Expr(ExprData::new(Un {
             op: UnOp::Exp,

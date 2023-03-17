@@ -4,6 +4,63 @@ use indexmap::{IndexMap, IndexSet};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::BuildHasher;
 
+#[test]
+fn test() {
+    use melior::{dialect, ir::*, utility::register_all_dialects, Context};
+
+    let registry = dialect::Registry::new();
+    register_all_dialects(&registry);
+
+    let context = Context::new();
+    context.append_dialect_registry(&registry);
+    context.get_or_load_dialect("func");
+
+    let location = Location::unknown(&context);
+    let module = Module::new(location);
+
+    let integer_type = Type::integer(&context, 64);
+
+    let function = {
+        let region = Region::new();
+        let block = Block::new(&[(integer_type, location), (integer_type, location)]);
+
+        let sum = block.append_operation(
+            operation::Builder::new("arith.addi", location)
+                .add_operands(&[
+                    block.argument(0).unwrap().into(),
+                    block.argument(1).unwrap().into(),
+                ])
+                .add_results(&[integer_type])
+                .build(),
+        );
+
+        block.append_operation(
+            operation::Builder::new("func.return", Location::unknown(&context))
+                .add_operands(&[sum.result(0).unwrap().into()])
+                .build(),
+        );
+
+        region.append_block(block);
+
+        operation::Builder::new("func.func", Location::unknown(&context))
+            .add_attributes(&[
+                (
+                    Identifier::new(&context, "function_type"),
+                    Attribute::parse(&context, "(i64, i64) -> i64").unwrap(),
+                ),
+                (
+                    Identifier::new(&context, "sym_name"),
+                    Attribute::parse(&context, "\"add\"").unwrap(),
+                ),
+            ])
+            .add_regions(vec![region])
+            .build()
+    };
+    module.body().append_operation(function);
+
+    panic!("{:?}", module.as_operation());
+}
+
 #[repr(u8)]
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum PadKind {

@@ -40,6 +40,7 @@ pub fn param<T: Value, E: Eval>(shape: Shape) -> Expr<T, E> {
         _p: Default::default(),
     }))
 }
+
 pub fn zero<T: Value, E: Eval>(shape: Shape) -> Expr<T, E> {
     Expr(ExprData::new(Param {
         shape,
